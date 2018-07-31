@@ -1,0 +1,596 @@
+---
+title: "Data Analysis with R"
+author: "Axel Müller"
+date: "`r format(Sys.time())`"
+output:
+  pdf_document:
+    toc: yes
+  html_notebook:
+    code_folding: show
+    css: rmarkdown.css
+    fig_caption: yes
+    fig_height: 6
+    fig_width: 7
+    highlight: tango
+    theme: spacelab
+    toc: yes
+    toc_float: yes
+  html_document:
+    toc: yes
+---
+
+```{r "setup", include = FALSE}
+
+#some requirements
+library(tidyverse)
+library(readr)
+library(ggrepel)
+library(ggthemes)
+library(cowplot)
+#working directory
+#opts_knit$set(root.dir = "/home/axel/Documents/teaching/rna_seq_diy/hirn2017_meeting")
+
+```
+
+## Intro
+
+R is a language for statistical computing and graphics. In contrast to matlab or 
+mathematica it’s free and open source. Hence, an ecosystem of diverse packages 
+is growing rapidly. These packages are designed to make the R experience better, 
+examples are dplyr and tidyr, to improve R’s plotting capabilities, e.g. 
+ggplot2, or to address the specific needs of countless fields such as: Finance, 
+Astronomy, Linguistics, …, and of course Biology. A lot of biological packages 
+especially those that deal with high throughput genomic data are associated 
+with [Bioconductor](https://www.bioconductor.org/).
+
+
+### Some very useful commands before we get started
+Before we get started I'd like to introduce some basic navigation commands:
+
+    - getwd() will show you your working directory
+    - setwd(“some/path/to/the/directory”) allows you to change the working directory
+    - dir() lists the contents of the working directory.
+
+Three more commands that come in very handy are:
+
+    - ?some_command: This yields help pages for a command
+    - ??some_package: Same but as ?some_command for packages.
+    - str(some_object): Displays the internal structure of an R object
+    
+### Simple math with R
+
+```{r}
+40 + 2
+```
+```{r}
+44 - 2
+```
+```{r}
+6 * 7
+```
+```{r}
+84 / 2
+```
+```{r}
+sqrt(1764)
+```
+
+```{r}
+6.480741**2
+```
+The alternative syntax for this is:
+
+```{r}
+6.480741^2
+```
+
+### Using variables
+
+In R anyting can be assigned to a variable. This is done as follows:
+
+```{r}
+a <- "Hello World"
+b <- 21
+```
+Once the assignment took place you can use the variables instead:
+
+```{r}
+a
+```
+
+```{r}
+(b + b)^2
+```
+
+Two more comments to assigning values to variables. Using the "=" sign instead of
+ "<-" is supported but discouraged. Secondly using Rstudio pressing "Alt -" is a
+ shortcut for "<-".
+ 
+## Analyzing data
+
+In our webinar series we will give a more detailed introduction to R
+In this brief introduction, however, we show you how you can analyze data
+and create compelling graphs with very little background knowledge.
+Let's go straight to some already processed RNA-seq data. In our webinar series 
+we will also tell you how to process RNA-seq data yourself using open source software.
+
+The dataset we will work with, GSE79724, can be downloaded from NCBI's GEO. There
+are R-packages that facilitate this process but to limit the number of dependencies
+you need to install we provided the data [here](link_to_the_data)
+
+
+
+### Dataframes (and Tibbles)
+
+Dataframes are R's main workhorse. The packages combined in 
+[tidyverse](https://blog.rstudio.org/2016/09/15/tidyverse-1-0-0/) facilitate handling
+these. In the process they are converted to tibbles, but that's a detail we 
+can ignore.
+
+#### Loading the data
+
+The data we address here comes in the form of csv files. CSV stands for comma 
+separated values. It's basically a text file that looks like this:
+
+> <br/>header1, header2, header3<br/>
+> <br/>value1a, value2a, value3a<br/>
+> <br/>value2a, value2b, value3b<br/>
+> <br/>another_value1, another_value2, another_value3<br/>
+
+We can load the data into a tibble by using the function read_csv, which is part 
+of the readr package. It's also possible to achieve the same with a base R 
+function (read.csv) but the readr
+functions are much faster. Another text-based forman that is often used is tsv,
+tab separated values. TSV files tend to be more human readable and there are 
+equivalent functions in R to load these files. 
+To find out more about read_csv we can execute the 
+following command:
+
+```{r}
+?read_csv
+```
+The data we want to have a closer look at is in the file data.csv.
+The right hand panel of Rstudio has a "Files" tab. It displays all the files 
+in the current directory. Clicking on data.csv will show you the contents of the 
+file. For larger files (and slower computers) it's better not to aim to display the
+entire file though.
+
+```{r}
+# reading the data.csv file
+# we give the path to the file in quotation marks, since we are in the right 
+# directory already we just have to give the filename, we also tell the function
+# that we expects some column names, hence col_names = TRUE
+my_data <- read_csv("data.csv", col_names = TRUE)
+
+```
+
+Now that the file is loaded we can have a look. There are several ways to do
+this. Rstudio offers an interactive option. In the top right panel there is the 
+Environment tab. Here we see all data and all values that are currently in 
+memory. Clicking on my_data will open a new tab in this panel and allows us to 
+observe the file. We should look for example if the file really has column names
+or if this is not the case. The panel on the right also says that my_data has 
+25,559 rows and 8 columns. The swiftness of opening and displaying this file
+obviously depends on the size of the file and specs of the computer. 
+In any case, there is very little value in displaying several thousand lines as 
+we are not going to visually inspect them anyway. We probably just have a look 
+at a few lines at the top to see if the column headers were recognized as such 
+and to get a feeling for what is in the file. So rather than "displaying"
+25,559 lines we should be fine by just having a look at 10 lines or so. 
+This can be achieved by base-R's head() function. But here we are going to promote
+the use of the tidyverse functions. They are highly optimized and very fast, and 
+the syntax is fairly intuitive:
+The core principle follows along these lines: 
+
+- pick some data
+- perform a task on it
+- perform the next task
+- ...
+- output the results
+
+In this first case we want to take the data and show the first 10 lines:
+
+```{r}
+my_data %>% head(10)
+```
+
+To string the commands together we use the pipe character (%>%) It's so commonly
+used in modern R programming that it has its own keyboard shortcut in Rstudio
+(Shift-Control-M). 
+
+The file contains already a lot of interesting values, such as foldChange and 
+pvalue. But for the purpose of this tutorial we are going to recalculate 
+some of them. First we create a data frame that contains only the gene names,
+the baseMean_LG3-LG6-LG9, and the baseMean_LG2-LG5-LG8 values.
+
+The process of selecting and manipulating data in a way that suits the analysis 
+is often referred
+to as data-wrangling. Rstudio offers a very good cheat-sheet for this [here](https://www.rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf)
+The packages of the tidyverse we are going to use for this are dplyr and tidyr.
+Let's see how this works in practice:
+
+```{r}
+# create a data frame with the selected columns only
+
+my_calc <- my_data %>% 
+  select(gene, `baseMean_LG3-LG6-LG9`, `baseMean_LG2-LG5-LG8`)
+
+# the column names contain hyphens, this can lead to some confusion as R 
+# might interpret it as a minus sign, hence we need to use the ticks.
+
+# check how it worked
+my_calc %>% head()
+```
+
+Before we move on it makes sense to rename the columns so we don't have to use
+ticks all the time.
+
+```{r}
+colnames(my_calc) <- c("gene", "LG369", "LG258")
+my_calc %>% head()
+```
+
+
+
+Firstly, lets calculate the mean value and the standard deviation, SD:
+
+```{r}
+# We reassign the output to the initial variable my_calc.
+# An alternative lies in using another package (magrittr)
+# which supports the operator %<>% which feeds back the output
+# into the input variable
+
+my_calc <- my_calc %>% 
+  mutate(base_mean_all = (LG369 + LG258)/2)
+my_calc
+```
+
+Of course R has a function mean that can do the same. In order for it to work
+here we have to add the function rowwise which tells R that the following 
+operations are done row-wise. This allows the user to do fairly complex operations:
+
+```{r}
+my_calc %>% 
+  rowwise() %>% 
+  mutate(base_mean_all = mean(c(LG369, LG258))) %>% 
+  head()
+```
+
+We also want to calculate the fold-change:
+
+```{r}
+my_calc <- my_calc %>% 
+  mutate(foldchange = LG258/LG369)
+my_calc
+```
+
+Obviously, it was also possible to perform the previous two steps in one go.
+
+Now that we calculated the fold changes we can have a look at which genes 
+are up- and which are down-regulated. Let's take a everything that beyond 
+a 2-fold cut-off.
+
+```{r}
+down_regulated <- my_calc %>% 
+  filter(foldchange < 0.5)
+up_regulated <- my_calc %>% 
+  filter(foldchange > 2)
+
+```
+
+How many genes are downregulated? For this we count the number of rows (nrow) in 
+the dataframe down_regulated:
+
+```{r}
+nrow(down_regulated)
+```
+
+and up regulated?
+
+```{r}
+nrow(up_regulated)
+```
+
+How many genes did we have to start with?
+
+```{r}
+nrow(my_data)
+```
+
+Ok, now that we know how to select and rename columns, filter by cut-off values, 
+and create new columns we can go back to the original dataset and do some other 
+interesting things. 
+
+In case you got lost now it's the time to catch up again:
+Let's have a look at the my_data dataframe again:
+
+```{r}
+my_data %>% head()
+```
+
+
+Let's reapply the filtering techinque to this dataframe and create a new dataframe
+called my_data_p001 that contains only results with a p-value (pval) smaller than 
+0.05
+
+Can you tell me how many rows this new dataframe has?
+
+```{r}
+my_data_p05 <- my_data %>% 
+  filter(pval < 0.05)
+nrow(my_data_p05)
+```
+
+```{r}
+my_data_p05 %>% head()
+```
+
+## Plotting
+
+### Volcano Plot
+
+Let's start of by doing a volcano plot. ggplot2 is a very powerful graphics 
+package in R. It's also part of the tidyverse. ggplot2 uses 
+[grammar of graphics](http://vita.had.co.nz/papers/layered-grammar.pdf)
+
+Let's see how this works in practice. First we create a cut-off for our data
+similar as we did before
+
+```{r}
+#create a threshold with an absolute fold change bigger than two and p-value 
+#smaller than the Bonferoni cutoff. 
+my_data$threshold <- 
+  as.factor(abs(my_data$log2FoldChange) > 2 & 
+              my_data$pval < 0.05/nrow(my_data))
+```
+
+Now we can create a simple volcano plot. First we tell ggplot what data we use
+and which column we want to plot and in aes we specify what we want to plot on
+the x and the y axis. [Here](https://www.rstudio.com/wp-content/uploads/2015/03/ggplot2-cheatsheet.pdf)
+is a fantastic cheat sheet.
+
+```{r}
+p <- ggplot(data = my_data, 
+             aes(x = log2FoldChange, y = -log10(pval), color = threshold)) 
+```
+
+Now we can add the style of our plot
+
+```{r}
+vp <- p + geom_point()
+vp
+```
+
+
+Why do we get the warning that almost 4000 rows were removed?
+A look at my_data reveals that a number of rows have means of 0 and hence missing
+values for everything that got calculated. Missing values are called NA in R.
+
+
+```{r}
+missing_data <- my_data %>% 
+  filter(is.na(threshold))
+nrow(missing_data)
+```
+Now that this is clarified, wouldn't it be nice to have a title and some proper
+axis labels rather than the column headers?
+
+```{r}
+vp <- vp + 
+  xlab("log2 fold change") +
+  ylab("-log10 p-value") +
+  ggtitle("Volcano Plot")
+vp
+
+```
+
+
+Let's add something else:
+
+```{r}
+vp <- vp + 
+  geom_rug()
+vp
+```
+
+Wouldn't it be useful to see the gene names next to the dots?
+Given that we have many thousand dots we don't expect to be able to read anything
+but maybe we can add the names to the dots that meet the threshold.
+for this we use the ifelse function:
+
+```{r}
+?ifelse
+```
+We run a test (is threshold true) and then we add the label, if it's False we add
+nothing ('')
+
+```{r}
+vp_labels <- vp +
+  geom_text(aes(label = ifelse(threshold == TRUE, gene, '')))
+vp_labels
+```
+
+We can improve on this:
+
+```{r}
+vp_labels <- vp +
+    geom_text_repel(aes(label = ifelse(threshold == TRUE, gene, '')))
+
+vp_labels 
+```
+
+Finally, we may want to remove some clutter, if you haven't heard of 
+[Edward Tufte](https://en.wikipedia.org/wiki/Edward_Tufte) you might want to 
+check him out.
+
+```{r}
+vp_labels <- vp_labels +
+  # remove the grid in the background
+  theme_tufte() +
+  # remove the legend
+  theme(legend.position="none")
+
+vp_labels 
+```
+
+
+
+## [GO Terms](http://www.geneontology.org/)
+
+The data shows us which genes are enriched, let's add some pathway information.
+
+As mentioned in the introduction, there are a lot of packages in R addressed to 
+biologists, the majority of them is found in bioconductor. Some of these packages
+have complex dependencies and installation can take a few minutes that's why we
+don't use any of these packages in this tutorial. The biomaRt package allows us 
+to get the GO terms for the genes in our dataset. 
+The command looks like this
+
+> library(biomaRt)
+> ensembl<- useMart("ensembl",dataset="hsapiens_gene_ensembl")
+> gene_goid <- getBM(attributes=c('hgnc_symbol', 'go_id', 'name_1006'), filters = 'hgnc_symbol', values = my_data_p05$gene, mart = ensembl)
+
+This query takes a bit of time to run, I saved the results in gene_goid.tsv
+and we are just going to load them. 
+
+This is a good opportunity to check if you remember how to load a csv file. 
+Let's load the file into a dataframe called "goid". Use read_tsv this time
+
+```{r}
+goid <- read_tsv("gene_goid.tsv", col_names = TRUE)
+goid
+```
+
+Now we can combine this dataframe with my_data_p05
+
+```{r}
+my_goid_data <- my_data_p05 %>% 
+  inner_join(goid)
+my_goid_data %>% head()
+```
+
+How many individual GO terms do we have here?
+
+```{r}
+nrow(my_goid_data %>% select(go_id) %>% distinct)
+```
+
+
+```{r}
+goid_occ <- my_goid_data %>% 
+  group_by(go_id) %>% 
+  summarise(occurrences = n()) %>% 
+  na.omit(go_id)
+
+my_goid_data <- my_goid_data %>% 
+  inner_join(goid_occ)
+my_goid_data
+```
+
+If we had more time we could do an enrichment analysis here. But for now 
+we just have a look at what happens at different locations.
+
+Which proteins undergo more changes, cytosolic or membrane proteins?
+GO:0005829 indicates cytosol, and GO:0016020 membrane proteins
+
+
+```{r}
+location_data <- my_goid_data %>% 
+  filter(go_id == "GO:0005829" | go_id == "GO:0016020")
+```
+
+### Violine and Boxplots
+
+
+
+```{r}
+
+# the next command might appear a bit esoteric, it calculates the number 
+# of proteins that are cytosolic or membrane proteins
+# The paste command prints outputs of various commands together
+# see ?paste
+
+xlabs <- 
+  paste(levels(location_data$name_1006),"\n(N=",table(location_data$name_1006),")",
+        "\n", location_data$name_1006, sep="")
+
+p3 <- ggplot(data = location_data, aes(factor(name_1006), log2FoldChange))
+violinep <- p3 + 
+  geom_violin() +
+  geom_tufteboxplot() +
+  theme_tufte() +
+  xlab("") +
+  ylab("log 2 fold change") +
+  ggtitle("Differential expression by location") +
+  scale_x_discrete(labels = xlabs)
+violinep
+```
+
+### Heatmaps
+
+Bioconductor offers a number of packages that allows you to draw heatmaps 
+including hierarchical clustering. The function heatmap() that is in base R
+does so too. Since we only have two groups hierarchical clustering doesn't make
+a lot of sense. Hence we can just use ggplot2 again.
+First we look for all results that have a GO term related to "glucose". For this 
+we use the filter command in combination with grepl. grepl is extremely powerful!
+
+
+```{r}
+hm_data <- my_goid_data %>% 
+  filter(grepl("glucose", name_1006)) %>% 
+  select(gene, `baseMean_LG3-LG6-LG9`, `baseMean_LG2-LG5-LG8`)
+# let's rename the columns again
+colnames(hm_data) <- c("gene", "LG369","LG258")
+```
+
+Before we can use ggplot2 to create a heatmap we have to rearrange our data into
+a tidy format. Having tidy data
+has, as the name implies, a number of advantages. I encourage you to follow 
+this link [here](http://vita.had.co.nz/papers/tidy-data.pdf).
+
+```{r}
+hm_long <- hm_data %>% 
+  gather(key, base_means, -gene)
+hm_long %>% head()
+```
+
+This gives us the desired result whith 1 observation per row.
+
+```{r}
+p2 <- ggplot(hm_long, aes(x = gene, y = as.factor(key)))
+hm <- p2 + 
+  geom_tile(aes(fill = base_means)) + 
+  scale_fill_gradient(low="white", high="darkblue") + 
+  xlab("") + ylab("") +
+  ggtitle("Heatmap of genes connected to glucose") +
+  theme(axis.text.x =
+          element_text(size = 8,
+                       angle = 90,
+                       hjust = 0.5))
+hm
+```
+
+
+## Putting it all together
+
+We created three plots, the violine plot (violinep), the heatmap (hm), and 
+the volcano plot (vp_label). The package cowplot allows us to combine
+these figures together with annotation and everything. A lot of people do this
+in Illustrator or Inkscape. While these vectorgraphics programs yield high 
+quality graphics, working with them can be quite painful. Especially if the figure
+needs to undergo any sort of modification. cowplot provides a canvas to put on 
+figures and tables and annotations. Its function ggdraw() allows the user to 
+plot things in arbitrary positions. The canvas's bottom left corner has the 
+x- and y- coordinates of 0, 0 and the top right corner of 1, 1. drow_plot()
+takes the coordinates plus relative width and height. draw_plot_label adds the 
+labels, it takes the x and y coordinates for each label, and the size as input.
+
+```{r}
+ggdraw() +
+  draw_plot(vp_labels, 0, 0.5, 0.5, 0.5) +
+  draw_plot(violinep, 0.5, 0.5, 0.5, 0.5) +
+  draw_plot(hm, 0, 0, 1, 0.5) +
+  draw_plot_label(LETTERS[1:3], c(0, 0.5, 0), c(1, 1, 0.5), size = 15)
+```
+
