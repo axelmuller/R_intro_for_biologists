@@ -1,0 +1,41 @@
+
+body {
+    color: #707070;
+    background: #ffffff;
+    #background: #f6f6f6;
+    width: 980px;
+    margin: auto;
+    text-align: justify;
+    text-justify: inter-word
+}
+
+div #notebook { /* center the content */
+    text-align: justify;
+    padding: 0em 1em 0em 1em;
+    font-family: Verdana, Geneva, sans-serif;
+    background: #4b4b4b;
+    color: #333;    
+    padding-left: 1em;
+    padding-right: 1em;
+    padding-top: 2ex;
+    text-align: justify;
+}
+
+code #notebook { /* center the content */
+    text-align: justify;
+    padding: 0em 1em 0em 1em;
+    font-family: SourceCodePro, sans-serif;
+    background: #4b4b4b;
+    color: #333;    
+    padding-left: 1em;
+    padding-right: 1em;
+    padding-top: 2ex;
+    text-align: justify;
+}
+
+/* header colors and fonts */
+h1 { color: #5b5b5b; font-variant: small-caps; font-weight: normal }
+h2 { color: #5b5b5b; }
+h3 { color: #5b5b5b; font-style: italic; font-weight: normal}
+
+
